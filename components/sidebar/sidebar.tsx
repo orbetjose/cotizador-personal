@@ -23,7 +23,7 @@ export function Sidebar() {
       {/* CONTROLES SUPERIORES */}
       <div className="p-4 flex items-center justify-between">
         <span className={`font-bold text-xl transition-opacity ${isOpen ? "opacity-100" : "opacity-0 hidden"}`}>
-          Panel Admin
+          Panel admin
         </span>
         <Button
           variant="ghost"
@@ -37,7 +37,7 @@ export function Sidebar() {
 
       <div className="px-3 space-y-4 mt-6">
         {/* Cotizaciones */}
-        <Link className="block" href="/cotizaciones">
+        <Link className="block" href="/dashboard/cotizaciones">
           <Button
             variant="ghost"
             className="w-full flex justify-start gap-3 text-lg cursor-pointer"
@@ -48,7 +48,7 @@ export function Sidebar() {
         </Link>
 
         {/* Clientes */}
-        <Link className="block" href="/clientes">
+        <Link className="block" href="/dashboard/clientes">
           <Button
             variant="ghost"
             className="w-full flex justify-start gap-3 text-lg cursor-pointer"
