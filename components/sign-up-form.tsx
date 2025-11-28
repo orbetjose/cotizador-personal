@@ -23,42 +23,57 @@ export function SignUpForm({ className, ...props }: React.ComponentPropsWithoutR
   const router = useRouter();
 
   const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const supabase = createClient();
-    setIsLoading(true);
-    setError(null);
+  e.preventDefault();
+  const supabase = createClient();
+  setIsLoading(true);
+  setError(null);
 
-    if (data.password !== data.repeatPassword) {
-      setError("Passwords do not match");
-      setIsLoading(false);
-      return;
-    }
+  if (data.password !== data.repeatPassword) {
+    setError("Passwords do not match");
+    setIsLoading(false);
+    return;
+  }
 
-    try {
-      const {data: authData, error } = await supabase.auth.signUp({
-        email: data.email,
-        password: data.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/protected`,
-          data: {
-            full_name: data.name
-          }
-        },
-      });
-      if (error) throw error;
+  try {
+    const {data: authData, error } = await supabase.auth.signUp({
+      email: data.email,
+      password: data.password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/protected`,
+        data: {
+          full_name: data.name
+        }
+      },
+    });
+    if (error) throw error;
+    
+    // Solo insertar si el usuario fue creado exitosamente
+    if (authData.user) {
+      const { error: insertError } = await supabase
+        .from("users")
+        .insert([{ 
+          id: authData.user.id, 
+          email: authData.user.email, 
+          name: data.name 
+        }]);
       
-      router.push("/auth/sign-up-success");
-    } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "An error occurred");
-    } finally {
-      setIsLoading(false);
+      // No lanzar error si falla el insert (por si el trigger ya lo hizo)
+      if (insertError) {
+        console.warn("Error inserting user profile:", insertError.message);
+      }
     }
-  };
+    
+    router.push("/auth/sign-up-success");
+  } catch (error: unknown) {
+    setError(error instanceof Error ? error.message : "An error occurred");
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setData((prev) => ({ ...prev, [name]: value }));
-    console.log()
   };
 
   return (

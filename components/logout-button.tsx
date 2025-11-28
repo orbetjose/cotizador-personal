@@ -21,7 +21,7 @@ export function LogoutButton({isOpen}: LogoutButtonProps) {
   };
 
   return (
-    <Button onClick={logout} className="bg-transparent text-red-600 hover:bg-transparent hover:underline">
+    <Button onClick={logout} className="bg-transparent text-red-600 hover:bg-transparent hover:underline cursor-pointer">
       <LogOut className="h-5 w-5" />
       {isOpen && "Cerrar sesión"}
       

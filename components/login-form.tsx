@@ -24,17 +24,12 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
     setError(null);
 
     try {
-      const { data: authData, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       if (error) throw error;
-      const user = authData.user;
-      const { error: insertError } = await supabase
-        .from("users")
-        .insert([{ id: user.id, email: user.email, name: user?.user_metadata.full_name }]);
-
-      if (insertError) throw insertError;
+     
       router.push("/dashboard");
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred");

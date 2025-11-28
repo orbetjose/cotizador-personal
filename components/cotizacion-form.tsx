@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/client";
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { useRouter } from "next/navigation"; // ← Asegúrate que sea de 'next/navigation'
+import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
@@ -14,15 +14,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MoneyInput } from "@/components/moneyinput";
 import { toast } from "sonner";
+import { Plus, X } from "lucide-react";
 
 const formSchema = z.object({
   razonSocial: z.string().min(2, {
     message: "La razón social debe tener al menos 2 caracteres.",
   }),
   tipoDocumento: z.enum(["RUC", "NIT", "NO_APLICA"]).optional(),
-  documentoFiscal: z.string().regex(/^\d{11}$/, {
-    message: "El RUC debe tener exactamente 11 dígitos.",
-  }),
+  documentoFiscal: z.string().optional(),
   cliente: z.string().min(2, {
     message: "El nombre del cliente debe tener al menos 2 caracteres.",
   }),
@@ -34,15 +33,12 @@ const formSchema = z.object({
     .max(15, {
       message: "El teléfono no puede tener más de 15 dígitos.",
     }),
-  correo: z.email({
-    message: "Debe ser un email válido.",
-  }),
+  correo: z.email().optional().or(z.literal("")),
   descripcionServicio: z.string().min(10, {
     message: "La descripción debe tener al menos 10 caracteres.",
   }),
-  detallesServicio: z.string().min(20, {
-    message: "Los detalles deben tener al menos 20 caracteres.",
-  }),
+  tasks: z.array(z.string().min(1, "La tarea no puede estar vacía").trim()),
+  techs: z.array(z.string().min(1, "Las tecnologías no pueden estar vacías").trim()),
   total: z.string({
     message: "El total debe ser un número mayor a 0.",
   }),
@@ -51,6 +47,8 @@ const formSchema = z.object({
 export function CotizacionForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [servicesTasks, setServicesTasks] = useState("");
+  const [techUsage, setTechUsage] = useState("");
   const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -63,7 +61,8 @@ export function CotizacionForm() {
       telefono: "",
       correo: "",
       descripcionServicio: "",
-      detallesServicio: "",
+      tasks: [],
+      techs: [],
       total: "",
     },
   });
@@ -88,6 +87,24 @@ export function CotizacionForm() {
         return /^\d{9,10}$/.test(value) || "NIT debe tener 9-10 dígitos";
       default:
         return true;
+    }
+  };
+
+  const addDetail = (detail: string, inputName: "tasks" | "techs") => {
+    if (detail.trim().length < 1) {
+      toast.error("La tarea debe tener al menos 1 caracter.");
+      return;
+    }
+
+    const currentTareas = form.getValues(inputName);
+    form.setValue(inputName, [...currentTareas, detail.trim()]);
+    setServicesTasks("");
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, detail: string, inputName: "tasks" | "techs") => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addDetail(detail, inputName);
     }
   };
 
@@ -117,7 +134,8 @@ export function CotizacionForm() {
             telefono: values.telefono,
             correo: values.correo,
             descripcion_servicio: values.descripcionServicio,
-            detalles_servicio: values.detallesServicio,
+            tareas_servicio: values.tasks,
+            tecnologias_servicio: values.techs,
             total: values.total,
           },
         ])
@@ -127,11 +145,12 @@ export function CotizacionForm() {
       }
 
       // 3. Éxito
-      form.reset();
       toast.success("¡Cotización creada exitosamente!", {
         description: `Número: ${data[0].numero_cotizacion}`,
         duration: 5000,
       });
+      form.reset();
+      router.push("/dashboard/cotizaciones?refresh=true");
     } catch (error: unknown) {
       console.error("Error:", error);
       const errorMessage = error instanceof Error ? error.message : "Error desconocido";
@@ -269,6 +288,7 @@ export function CotizacionForm() {
                     <FormLabel>Correo Electrónico</FormLabel>
                     <FormControl>
                       <Input
+                        required={false}
                         type="email"
                         placeholder="cliente@empresa.com"
                         {...field}
@@ -288,8 +308,9 @@ export function CotizacionForm() {
                 <FormItem>
                   <FormLabel>Descripción del Servicio</FormLabel>
                   <FormControl>
-                    <Input
+                    <Textarea
                       placeholder="Desarrollo web, consultoría, etc."
+                      className="min-h-[120px]"
                       {...field}
                     />
                   </FormControl>
@@ -298,25 +319,96 @@ export function CotizacionForm() {
                 </FormItem>
               )}
             />
+            <div className="space-y-2">
+              <FormLabel>Tareas que se van a realizar</FormLabel>
+              <div className="flex gap-4">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  type="button"
+                  className="cursor-pointer"
+                  onClick={() => addDetail(servicesTasks, "tasks")}>
+                  <Plus />
+                </Button>
 
-            <FormField
-              control={form.control}
-              name="detallesServicio"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Detalles del Servicio</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Describe detalladamente el servicio, alcances, metodología, entregables, tiempos, etc."
-                      className="min-h-[120px]"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormDescription>Incluye todos los detalles relevantes del servicio</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                <Input
+                  placeholder="Agregar tarea..."
+                  value={servicesTasks}
+                  onChange={(e) => setServicesTasks(e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(e, servicesTasks, "tasks")}
+                />
+              </div>
+            </div>
+            {/* Lista de tareas agregadas */}
+            <div className="space-y-2 mt-4">
+              {form.watch("tasks")?.map((tarea, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between bg-muted px-3 py-1 rounded">
+                  <span className="text-sm font-medium">{tarea}</span>
+                  <Button
+                    className="cursor-pointer"
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      const tareas = form.getValues("tasks");
+                      form.setValue(
+                        "tasks",
+                        tareas.filter((_, i) => i !== index)
+                      );
+                    }}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+            <div className="space-y-2">
+              <FormLabel>Tecnologías a usar</FormLabel>
+              <div className="flex gap-4">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  type="button"
+                  className="cursor-pointer"
+                  onClick={() => addDetail(techUsage, "techs")}>
+                  <Plus />
+                </Button>
+
+                <Input
+                  placeholder="Agregar tarea..."
+                  value={techUsage}
+                  onChange={(e) => setTechUsage(e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(e, techUsage, "techs")}
+                />
+              </div>
+            </div>
+
+            {/* Lista de techs agregadas */}
+            <div className="space-y-2 mt-4">
+              {form.watch("techs")?.map((tarea, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between bg-muted px-3 py-1 rounded">
+                  <span className="text-sm font-medium">{tarea}</span>
+                  <Button
+                    className="cursor-pointer"
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      const tareas = form.getValues("techs");
+                      form.setValue(
+                        "techs",
+                        tareas.filter((_, i) => i !== index)
+                      );
+                    }}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+
             <FormField
               control={form.control}
               name="total"
@@ -338,6 +430,7 @@ export function CotizacionForm() {
             <div className="flex gap-4">
               <Button
                 type="submit"
+                className="cursor-pointer"
                 disabled={isLoading}>
                 {isLoading ? "Guardando..." : "Crear Cotización"}
               </Button>
