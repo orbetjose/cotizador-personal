@@ -45,7 +45,7 @@ export const styles = StyleSheet.create({
   separador: {
     borderBottom: "1px solid #000",
     marginTop: 4,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   separadorfinal: {
     borderBottom: "1px solid #000",
@@ -53,18 +53,25 @@ export const styles = StyleSheet.create({
     marginBottom: 8,
   },
   descripcion_servicio: {
-    marginTop: 30,
+    marginTop: 20,
+    minHeight: 130,
     height: "auto",
     fontWeight: "bold",
     border: "1px solid #000",
-    padding: 12,
+    paddingLeft: 12,
+    paddingRight: 12,
+    paddingTop: 8,
+    paddingBottom: 8, 
   },
   detalles_servicio: {
     marginTop: 20,
     fontWeight: "bold",
-    height: "auto",
+    height: "42vh",
     border: "1px solid #000",
-    padding: 12,
+    paddingLeft: 12,
+    paddingRight: 12,
+    paddingTop: 8,
+    paddingBottom: 8, 
   },
   totales: {
     textAlign: "right",
@@ -73,7 +80,7 @@ export const styles = StyleSheet.create({
   footer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 80,
+    marginTop: 16,
     fontWeight: "bold",
     textTransform: "uppercase",
   },
@@ -107,7 +114,12 @@ const DocumentPDF = ({ data }: { data: CotizacionPDFProps }) => (
             <Text style={{ fontWeight: "bold" }}>Razón social:</Text> {data?.razon_social}
           </Text>
           <Text style={{ marginBottom: 4 }}>
-            <Text style={{ fontWeight: "bold" }}>Documento fiscal:</Text> {data?.tipo_documento}{" "}
+            <Text style={{ fontWeight: "bold" }}>Documento fiscal:</Text>{" "}
+            <Text>
+              {data?.tipo_documento
+                .toUpperCase()
+                }
+            </Text>{" "}
             {data?.documento_fiscal}
           </Text>
         </View>
@@ -127,6 +139,7 @@ const DocumentPDF = ({ data }: { data: CotizacionPDFProps }) => (
           )}
         </View>
       </View>
+
       <View style={styles.descripcion_servicio}>
         <Text>Descripción del servicio</Text>
         <View style={styles.separador} />
@@ -141,18 +154,21 @@ const DocumentPDF = ({ data }: { data: CotizacionPDFProps }) => (
             <Text
               key={index}
               style={{ fontWeight: "normal", marginLeft: 10, marginBottom: 4 }}>
-              {tarea}
+               {index + 1}. {tarea}
             </Text>
           ))}
-        <Text style={{ fontWeight: "bold", marginLeft: 4, marginBottom: 6, marginTop: 14 }}>Tecnologías:</Text>
-        {data?.tecnologias_servicio.length > 0 &&
-          data.tecnologias_servicio.map((tecnologia: string, index: number) => (
-            <Text
-              key={index}
-              style={{ fontWeight: "normal", marginLeft: 10, marginBottom: 4 }}>
-              {tecnologia}
-            </Text>
-          ))}
+        {data?.tecnologias_servicio.length > 0 && (
+          <View>
+            <Text style={{ fontWeight: "bold", marginLeft: 4, marginBottom: 6, marginTop: 14 }}>Tecnologías:</Text>
+            {data.tecnologias_servicio.map((tecnologia: string, index: number) => (
+              <Text
+                key={index}
+                style={{ fontWeight: "normal", marginLeft: 10, marginBottom: 4 }}>
+                {tecnologia}
+              </Text>
+            ))}
+          </View>
+        )}
       </View>
       <View
         style={{

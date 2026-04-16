@@ -8,14 +8,13 @@ import { createClient } from "@/lib/client";
 import { Cotizaciones } from "@/lib";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Printer, SquarePen } from "lucide-react";
-import { toast } from "sonner";
 import DeleteCotizacion from "@/components/action-delete";
 import { Input } from "@/components/ui/input";
 import { DatePickerInput } from "@/components/ui/datepickerinput";
 import { Label } from "@/components/ui/label";
 
 export default function CotizacionesPage() {
-  const [isLoading, setIsLoading] = useState(true); // Empezar con true
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cotizaciones, setCotizaciones] = useState<Cotizaciones>([]);
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -92,27 +91,13 @@ export default function CotizacionesPage() {
     }
   }, [refresh]);
 
-  const handleDelete = async (id: string) => {
-    const supabase = createClient();
-    const { error } = await supabase.from("cotizaciones").delete().eq("id", id);
-    toast.success("¡Cotización eliminada exitosamente!", {
-      duration: 5000,
-    });
-    if (error) {
-      console.error("Error al eliminar la cotización:", error.message);
-      setError(`Error al eliminar la cotización: ${error.message}`);
-    } else {
-      getCotizaciones();
-    }
-  };
+
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const searchTerm = e.target.value;
     setSearchTerm(searchTerm);
     searchCotizaciones(searchTerm);
   };
-
-  console.log(searchTerm);
 
   return (
     <>
@@ -182,7 +167,7 @@ export default function CotizacionesPage() {
                   <TableHead>Número</TableHead>
                   <TableHead>Cliente</TableHead>
                   <TableHead>Teléfono</TableHead>
-                  <TableHead>Descripción servicio</TableHead>
+                  <TableHead>Tipo de servicio</TableHead>
                   <TableHead>Fecha de creación</TableHead>
                   <TableHead>Total</TableHead>
                   <TableHead
@@ -198,7 +183,9 @@ export default function CotizacionesPage() {
                     <TableCell className="">{cotizacion.numero_cotizacion}</TableCell>
                     <TableCell className="">{cotizacion.cliente}</TableCell>
                     <TableCell className="">{cotizacion.telefono}</TableCell>
-                    <TableCell className=""></TableCell>
+                    <TableCell className="first-letter:uppercase">
+                      {cotizacion.tipo_servicio.replace(/_/g, " ").toLowerCase()}
+                    </TableCell>
                     <TableCell className="">{new Date(cotizacion.created_at).toLocaleDateString()}</TableCell>
                     <TableCell className="font-medium">S/ {cotizacion.total}</TableCell>
                     <TableCell className="font-medium ">
@@ -209,11 +196,12 @@ export default function CotizacionesPage() {
                           </Link>
                         </button>
                         <button className="cursor-pointer">
-                          <SquarePen width={20} />
+                          <Link href={`/dashboard/cotizaciones/${cotizacion.id}/editar`}>
+                            <SquarePen width={20} />
+                          </Link>
                         </button>
                         <DeleteCotizacion
-                          id={cotizacion.id}
-                          onDelete={handleDelete}
+                          id={cotizacion.id}                          
                         />
                       </div>
                     </TableCell>

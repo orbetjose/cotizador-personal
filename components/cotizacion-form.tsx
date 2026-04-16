@@ -1,11 +1,10 @@
 "use client";
 
-import { createClient } from "@/lib/client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+import { Cotizacion } from "@/lib";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -15,58 +14,41 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectVa
 import { MoneyInput } from "@/components/moneyinput";
 import { toast } from "sonner";
 import { Plus, X } from "lucide-react";
+import { cotizacionSchema, type CotizacionFormData } from "@/lib/validations/cotizacion";
+import { createCotizacion, updateCotizacion } from "@/app/actions/cotizaciones";
 
-const formSchema = z.object({
-  razonSocial: z.string().min(2, {
-    message: "La razón social debe tener al menos 2 caracteres.",
-  }),
-  tipoDocumento: z.enum(["RUC", "NIT", "NO_APLICA"]).optional(),
-  documentoFiscal: z.string().optional(),
-  cliente: z.string().min(2, {
-    message: "El nombre del cliente debe tener al menos 2 caracteres.",
-  }),
-  telefono: z
-    .string()
-    .min(6, {
-      message: "El teléfono debe tener al menos 6 dígitos.",
-    })
-    .max(15, {
-      message: "El teléfono no puede tener más de 15 dígitos.",
-    }),
-  correo: z.email().optional().or(z.literal("")),
-  descripcionServicio: z.string().min(10, {
-    message: "La descripción debe tener al menos 10 caracteres.",
-  }),
-  tasks: z.array(z.string().min(1, "La tarea no puede estar vacía").trim()),
-  techs: z.array(z.string().min(1, "Las tecnologías no pueden estar vacías").trim()),
-  total: z.string({
-    message: "El total debe ser un número mayor a 0.",
-  }),
-});
+type CotizacionFormProps = {
+  mode?: "edit" | "create";
+  initialData?: Cotizacion;
+  cotizacionId?: string;
+};
 
-export function CotizacionForm() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export function CotizacionForm({ mode, initialData, cotizacionId }: CotizacionFormProps) {
   const [servicesTasks, setServicesTasks] = useState("");
   const [techUsage, setTechUsage] = useState("");
+  const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  const form = useForm<CotizacionFormData>({
+    resolver: zodResolver(cotizacionSchema),
     defaultValues: {
-      razonSocial: "",
-      tipoDocumento: "RUC",
-      documentoFiscal: "",
-      cliente: "",
-      telefono: "",
-      correo: "",
-      descripcionServicio: "",
-      tasks: [],
-      techs: [],
-      total: "",
+      razonSocial: initialData?.razon_social || "",
+      tipoDocumento: (initialData?.tipo_documento as "RUC" | "NIT" | "NO_APLICA") || "RUC",
+      documentoFiscal: initialData?.documento_fiscal || "",
+      cliente: initialData?.cliente || "",
+      telefono: initialData?.telefono || "",
+      correo: initialData?.correo || "",
+      descripcionServicio: initialData?.descripcion_servicio || "",
+      tipoServicio:
+        (initialData?.tipo_servicio as "DESARROLLO_WEB" | "ASESORIA_TECNICA" | "SOPORTE_WEB" | "DESARROLLO_HTML") ||
+        "DESARROLLO_WEB",
+      tasks: initialData?.tareas_servicio || [],
+      techs: initialData?.tecnologias_servicio || [],
+      total: initialData?.total.toString() || "",
     },
   });
 
+  const { handleSubmit } = form;
   const tipoDocumento = form.watch("tipoDocumento");
 
   useEffect(() => {
@@ -108,68 +90,41 @@ export function CotizacionForm() {
     }
   };
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    setIsLoading(true);
-    setError(null);
-    const supabase = createClient();
-
-    try {
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-      if (userError || !user) {
-        throw new Error("Usuario no autenticado");
+  const onSubmit = handleSubmit((data) => {
+    startTransition(async () => {
+      const result = mode === "create" ? await createCotizacion(data) : await updateCotizacion(cotizacionId!, data);
+      if (result.success) {
+        toast.success(mode === "create" ? "Cotización creada exitosamente" : "Cotización actualizada exitosamente");
+        router.push("/dashboard/cotizaciones?refresh=true");
+      } else {
+        toast.error(result.error);
+        form.setError("root", {
+          type: "manual",
+          message: result.error,
+        });
       }
-
-      const { data, error: insertError } = await supabase
-        .from("cotizaciones")
-        .insert([
-          {
-            user_id: user?.id,
-            razon_social: values.razonSocial,
-            tipo_documento: values.tipoDocumento,
-            documento_fiscal: values.documentoFiscal,
-            cliente: values.cliente,
-            telefono: values.telefono,
-            correo: values.correo,
-            descripcion_servicio: values.descripcionServicio,
-            tareas_servicio: values.tasks,
-            tecnologias_servicio: values.techs,
-            total: values.total,
-          },
-        ])
-        .select();
-      if (insertError) {
-        throw new Error(`Error al guardar: ${insertError.message}`);
-      }
-
-      // 3. Éxito
-      toast.success("¡Cotización creada exitosamente!", {
-        description: `Número: ${data[0].numero_cotizacion}`,
-        duration: 5000,
-      });
-      form.reset();
-      router.push("/dashboard/cotizaciones?refresh=true");
-    } catch (error: unknown) {
-      console.error("Error:", error);
-      const errorMessage = error instanceof Error ? error.message : "Error desconocido";
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false); // ← Solo una vez aquí
-    }
-  };
+    });
+  });
 
   return (
     <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
-        <CardTitle>Nueva Cotización</CardTitle>
-        <CardDescription>Completa todos los campos para crear una nueva cotización.</CardDescription>
+        {mode === "edit" ? (
+          <div>
+            <CardTitle>Editar Cotización</CardTitle>
+            <CardDescription>Completa todos los campos para editar la cotización.</CardDescription>
+          </div>
+        ) : (
+          <div>
+            <CardTitle>Nueva Cotización</CardTitle>
+            <CardDescription>Completa todos los campos para crear una nueva cotización.</CardDescription>
+          </div>
+        )}
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form
-            onSubmit={form.handleSubmit(onSubmit)}
+            onSubmit={onSubmit}
             className="space-y-6">
             {/* Información de la empresa */}
             <div className="space-y-4">
@@ -300,6 +255,34 @@ export function CotizacionForm() {
               />
             </div>
 
+            <FormField
+              control={form.control}
+              name="tipoServicio"
+              render={({ field }) => (
+                <FormItem className="">
+                  <FormLabel>Tipo de servicio</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="w-60">
+                        <SelectValue placeholder="Selecciona un tipo" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value="DESARROLLO_WEB">Desarrollo web</SelectItem>
+                        <SelectItem value="DESARROLLO_HTML">Desarrollo HTML</SelectItem>
+                        <SelectItem value="ASESORIA_TECNICA">Asesoria técnica</SelectItem>
+                        <SelectItem value="SOPORTE_WEB">Soporte web</SelectItem>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             {/* Información del servicio */}
             <FormField
               control={form.control}
@@ -355,7 +338,7 @@ export function CotizacionForm() {
                       const tareas = form.getValues("tasks");
                       form.setValue(
                         "tasks",
-                        tareas.filter((_, i) => i !== index)
+                        tareas.filter((_, i) => i !== index),
                       );
                     }}>
                     <X className="h-4 w-4" />
@@ -400,7 +383,7 @@ export function CotizacionForm() {
                       const tareas = form.getValues("techs");
                       form.setValue(
                         "techs",
-                        tareas.filter((_, i) => i !== index)
+                        tareas.filter((_, i) => i !== index),
                       );
                     }}>
                     <X className="h-4 w-4" />
@@ -431,8 +414,8 @@ export function CotizacionForm() {
               <Button
                 type="submit"
                 className="cursor-pointer"
-                disabled={isLoading}>
-                {isLoading ? "Guardando..." : "Crear Cotización"}
+                disabled={isPending}>
+                {mode === "create" ? "Crear Cotización" : "Actualizar Cotización"}
               </Button>
               <Button
                 type="button"

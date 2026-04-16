@@ -10,13 +10,31 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Trash } from "lucide-react";
+import { deleteCotizacion } from "@/app/actions/cotizaciones";
+import { useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 interface DeleteCotizacionProps {
   id: string;
-  onDelete: (id: string) => void;
 }
 
-export default function DeleteCotizacion({ id, onDelete }: DeleteCotizacionProps) {
+export default function DeleteCotizacion({ id }: DeleteCotizacionProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  const handleDelete = () => {
+    startTransition(async () => {
+      const result = await deleteCotizacion(id);
+
+      if (result.success) {
+        toast.success("Cotización eliminada exitosamente");
+        router.push("/dashboard/cotizaciones?refresh=true"); 
+      } else {
+        toast.error(result.error);
+      }
+    });
+  };
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
@@ -33,7 +51,7 @@ export default function DeleteCotizacion({ id, onDelete }: DeleteCotizacionProps
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel className="cursor-pointer">Cancelar</AlertDialogCancel>
-          <AlertDialogAction onClick={() => onDelete(id)} className="bg-destructive hover:bg-destructive/90 cursor-pointer">
+          <AlertDialogAction disabled={isPending} onClick={handleDelete} className="bg-destructive hover:bg-destructive/90 cursor-pointer">
             Eliminar
           </AlertDialogAction>
         </AlertDialogFooter>
