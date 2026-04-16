@@ -26,34 +26,23 @@
 
 ### Dashboard Principal
 <p align="center">
-  <img src="./screenshots/dashboard.png" width="700" alt="Dashboard de cotizaciones">
+  <img src="./screenshots/cotizador-personal.webp" width="700" alt="Dashboard de cotizaciones">
 </p>
 *Vista general del listado de cotizaciones*
 
 ### Crear Nueva Cotización
 <p align="center">
-  <img src="./screenshots/create-quote.png" width="700" alt="Formulario de cotización">
+  <img src="./screenshots/creacion-cotizacion.webp" width="700" alt="Formulario de cotización">
 </p>
 *Formulario para crear cotizaciones personalizadas*
 
-### Vista Previa y Edición
-<table>
-  <tr>
-    <td width="50%">
-      <img src="./screenshots/creacion-cotizacion.webp" width="100%">
-      <p align="center"><b>Crear Cotización</b></p>
-    </td>
-    <td width="50%">
-      <img src="./screenshots/pdf-view.webp" width="100%">
-      <p align="center"><b>Vista Previa PDF</b></p>
-    </td>
-  </tr>
-</table>
-
-### Diseño Responsive
+### Vista pdf Cotización
 <p align="center">
-  <img src="./screenshots/cotizador-personal.webp" width="500" alt="Vista Desktop">
+  <img src="./screenshots/pdf-view.webp" width="700" alt="Pdf view de cotización">
 </p>
+*Vista pdf de la cotizacion creada*
+
+
 
 ## 💡 Motivación del Proyecto
 
